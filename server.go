@@ -9,28 +9,25 @@ import (
 )
 
 type serviceMethod struct {
-	method 		reflect.Method
-	argsType 	reflect.Type
-	replyType 	reflect.Type
+	method    reflect.Method
+	argsType  reflect.Type
+	replyType reflect.Type
 }
 
-type Request struct{
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params"`
+type Request struct {
+	Method string          `json:"method"`
+	Params json.RawMessage `json:"params"`
 }
-
-
 
 type Response struct {
-	Result  interface{}    `json:"result"`
+	Result interface{} `json:"result"`
 }
 
-var methods = make(map[string]* serviceMethod)
+var methods = make(map[string]*serviceMethod)
 
-
-func addServer(server interface{}) error{
+func addServer(server interface{}) error {
 	serverType := reflect.TypeOf(server)
-	for i := 0; i < serverType.NumMethod(); i++{
+	for i := 0; i < serverType.NumMethod(); i++ {
 		method := serverType.Method(i)
 
 		methodType := method.Type
@@ -48,37 +45,34 @@ func addServer(server interface{}) error{
 	return nil
 }
 
-
-func getmethod(methodName string)(* serviceMethod, error){
+func getmethod(methodName string) (*serviceMethod, error) {
 	method := methods[methodName]
-	if method == nil{
-		err:=fmt.Errorf("rpc can't find the %v method", methodName)
+	if method == nil {
+		err := fmt.Errorf("rpc can't find the %v method", methodName)
 		return nil, err
 	}
 	return method, nil
 }
 
-func startServer(server interface{}) error{
+func startServer(server interface{}) error {
 	ipv4addr := &net.UDPAddr{IP: net.IPv4(224, 0, 0, 250), Port: 5352}
 
 	conn, err := net.ListenUDP("udp", ipv4addr)
 
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 	}
-
 
 	pc := ipv4.NewPacketConn(conn)
 
 	// assume your have a interface named wlan
-	iface, err := net.InterfaceByName("以太网")
+	iface, err := net.InterfaceByName("ens33")
 	if err != nil {
 		return err
 	}
 	if err := pc.JoinGroup(iface, &net.UDPAddr{IP: net.IPv4(224, 0, 0, 250)}); err != nil {
 		return err
 	}
-
 
 	if loop, err := pc.MulticastLoopback(); err == nil {
 		fmt.Printf("MulticastLoopback status:%v\n", loop)
@@ -114,8 +108,6 @@ func startServer(server interface{}) error{
 	//	}
 	//}(conn, ipv4addr)
 
-
-
 	for {
 		var req Request
 		var response Response
@@ -123,16 +115,16 @@ func startServer(server interface{}) error{
 
 		n, addr, err := conn.ReadFromUDP(buff)
 
-		if err != nil{
+		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 
-		fmt.Printf("got message form %v:%v\n",addr.IP,addr.Port)
+		fmt.Printf("got message form %v:%v\n", addr.IP, addr.Port)
 
 		// 将请求转化为json
-		if err := json.Unmarshal(buff[:n], &req); err != nil{
-			fmt.Printf("unmarshal err : %v\n",err)
+		if err := json.Unmarshal(buff[:n], &req); err != nil {
+			fmt.Printf("unmarshal err : %v\n", err)
 			continue
 		}
 
@@ -140,7 +132,7 @@ func startServer(server interface{}) error{
 
 		serverMethod, err := getmethod(req.Method)
 
-		if err != nil{
+		if err != nil {
 			fmt.Println(err)
 			continue
 		}
@@ -161,7 +153,6 @@ func startServer(server interface{}) error{
 			reply,
 		})
 
-
 		fmt.Println("reply is", reply)
 
 		var errResult error
@@ -169,7 +160,6 @@ func startServer(server interface{}) error{
 		if errInter != nil {
 			errResult = errInter.(error)
 		}
-
 
 		if errResult == nil {
 			response.Result = reply.Interface()
@@ -189,15 +179,12 @@ func startServer(server interface{}) error{
 	}
 }
 
-
-type Api struct{
-
+type Api struct {
 }
 
 type Result struct {
 	Message string `json:"message"`
 }
-
 
 func (t *Api) Say(r *string, w *Result) error {
 	*w = Result{
@@ -206,8 +193,7 @@ func (t *Api) Say(r *string, w *Result) error {
 	return nil
 }
 
-
-func main(){
+func main() {
 	err := addServer(new(Api))
 	if err != nil {
 		fmt.Println(err)
@@ -218,5 +204,3 @@ func main(){
 	}
 
 }
-
-

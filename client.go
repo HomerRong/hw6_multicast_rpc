@@ -10,39 +10,34 @@ import (
 	"time"
 )
 
-
-type Request2 struct{
-	Method  string          `json:"method"`
-	Params  string 			`json:"params"`
+type Request2 struct {
+	Method string `json:"method"`
+	Params string `json:"params"`
 }
-
 
 type Response2 struct {
-	Result  interface{}    `json:"result"`
+	Result interface{} `json:"result"`
 }
 
-
-func main(){
+func main() {
 	ipv4addr := &net.UDPAddr{IP: net.IPv4(224, 0, 0, 250), Port: 5352}
 
 	conn, err := net.ListenUDP("udp", ipv4addr)
 
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 	}
-
 
 	pc := ipv4.NewPacketConn(conn)
 
 	// assume your have a interface named wlan
-	iface, err := net.InterfaceByName("VMware Network Adapter VMnet1")
+	iface, err := net.InterfaceByName("VMware Network Adapter VMnet8")
 	if err != nil {
 		fmt.Println(err)
 	}
 	if err := pc.JoinGroup(iface, &net.UDPAddr{IP: net.IPv4(224, 0, 0, 250)}); err != nil {
 		fmt.Println(err)
 	}
-
 
 	if loop, err := pc.MulticastLoopback(); err == nil {
 		fmt.Printf("MulticastLoopback status:%v\n", loop)
@@ -52,7 +47,6 @@ func main(){
 			}
 		}
 	}
-
 
 	go func(conn *net.UDPConn) {
 		for {
@@ -64,25 +58,22 @@ func main(){
 			}
 			n, addr, err := conn.ReadFromUDP(buf)
 			response := Response2{}
-			fmt.Println(buf[:n])
+			//fmt.Println(buf[:n])
 			err = json.Unmarshal(buf[:n], &response)
 
 			if err != nil {
 				fmt.Println(err)
 			}
 
-			if response.Result == nil{
+			if response.Result == nil {
 				continue
 			}
 
-			fmt.Println("\ninput from udp:", addr,response.Result.(map[string]interface{})["message"])
+			fmt.Println("\ngo message from udp:", addr, response.Result.(map[string]interface{})["message"])
 		}
 	}(conn)
 
-
 	reader := bufio.NewReader(os.Stdin)
-
-
 
 	for {
 		fmt.Print("Input: ")
@@ -96,16 +87,14 @@ func main(){
 		var req Request2
 		req.Method = "Say"
 		req.Params = temp
-		fmt.Println(req)
+		//fmt.Println(req)
 		b, err := json.Marshal(&req)
-		if err != nil{
+		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println("b is",b)
+		//fmt.Println("b is",b)
 		n, err := conn.WriteToUDP(b, ipv4addr)
 		fmt.Println("Sent to udp:", n, err)
 	}
-
-
 
 }
